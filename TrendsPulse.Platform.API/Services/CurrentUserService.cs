@@ -9,7 +9,7 @@ public sealed class CurrentUserService : ICurrentUserService
     public CurrentUserService(IHttpContextAccessor http) => _http = http;
 
     private ClaimsPrincipal? P => _http.HttpContext?.User;
-
+    //Test commet
     public Guid UserId
     {
         get
