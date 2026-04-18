@@ -1,0 +1,105 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+out/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# IIS / Web
+wwwroot/lib/
+wwwroot/dist/
+
+# Publish output
+publish/
+*.pubxml
+*.publishproj
+
+# Entity Framework
+*.mdf
+*.ldf
+
+# User secrets (IMPORTANT)
+secrets.json
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Node (if using frontend tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*
+
+# Test results
+TestResults/
+
+# Coverage
+coverage/
+*.coverage
+*.coveragexml
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# Dotnet tools
+.dotnet/
+
+# Backup & temp files
+*.bak
+*.tmp
+*.temp
+
+# SQL Server files
+*.mdf
+*.ldf
+
+# Azure
+*.azurePubxml
+
+# Docker
+docker-compose.override.yml
+
+# Logs & runtime
+logs/
+*.runtimeconfig.dev.json
