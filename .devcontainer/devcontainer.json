@@ -1,8 +1,0 @@
-{
-  "name": "Dev + SonarQube",
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-  },
-  "postCreateCommand": "echo 'Codespace ready with Docker support'"
-}
