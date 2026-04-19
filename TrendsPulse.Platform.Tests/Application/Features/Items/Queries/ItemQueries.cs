@@ -1,15 +1,15 @@
 using FluentValidation;
 using MediatR;
-using System.Threading;
-using TrendsPulse.Platform.Application.Common;
-using TrendsPulse.Platform.Application.Common.Exceptions;
-using TrendsPulse.Platform.Application.Common.Interfaces;
-using TrendsPulse.Platform.Application.Common.Mappings;
+using TrendsPulse.Platform.Application.Tests.Common;
+using TrendsPulse.Platform.Application.Tests.Common.Exceptions;
+using TrendsPulse.Platform.Application.Tests.Common.Interfaces;
+using TrendsPulse.Platform.Application.Tests.Common.Mappings;
 using TrendsPulse.Platform.Domain.Entities;
 using TrendsPulse.Platform.Domain.Enums;
 using TrendsPulse.Platform.Domain.Interfaces;
 
-namespace TrendsPulse.Platform.Application.Features.Items.Queries;
+
+namespace TrendsPulse.Platform.Application.Tests.Features.Items.Queries;
 
 // ════════════════════════════════════════════
 // GET ITEMS (PAGED)
@@ -48,11 +48,11 @@ public sealed class GetItemsHandler
     }
 
     public async Task<ApiResult<PagedResult<ItemSummaryDto>>> Handle(
-        GetItemsQuery request, CancellationToken cancellationToken)
+        GetItemsQuery request, CancellationToken ct)
     {
         var (items, totalCount) = await _uow.Items.GetPagedAsync(
             _user.TenantId, request.CategoryId, request.Status,
-            request.Search, request.Page, request.PageSize, cancellationToken);
+            request.Search, request.Page, request.PageSize, ct);
 
         return ApiResult<PagedResult<ItemSummaryDto>>.Ok(new PagedResult<ItemSummaryDto>
         {
@@ -87,9 +87,9 @@ public sealed class GetItemByIdHandler
     }
 
     public async Task<ApiResult<ItemDto>> Handle(
-        GetItemByIdQuery request, CancellationToken cancellationToken)
+        GetItemByIdQuery request, CancellationToken ct)
     {
-        var item = await _uow.Items.GetWithMappingsAsync(request.Id, cancellationToken)
+        var item = await _uow.Items.GetWithMappingsAsync(request.Id, ct)
             ?? throw new NotFoundException(nameof(Item), request.Id);
 
         if (item.TenantId.HasValue
@@ -124,9 +124,9 @@ public sealed class GetItemBySlugHandler
     }
 
     public async Task<ApiResult<ItemDto>> Handle(
-        GetItemBySlugQuery request, CancellationToken cancellationToken)
+        GetItemBySlugQuery request, CancellationToken ct)
     {
-        var item = await _uow.Items.GetBySlugAsync(request.Slug, cancellationToken)
+        var item = await _uow.Items.GetBySlugAsync(request.Slug, ct)
             ?? throw new NotFoundException(nameof(Item), request.Slug);
 
         if (item.TenantId.HasValue
@@ -134,7 +134,7 @@ public sealed class GetItemBySlugHandler
             && !_user.IsSuperAdmin)
             throw new ForbiddenException("You do not have access to this item.");
 
-        var withMappings = await _uow.Items.GetWithMappingsAsync(item.Id, cancellationToken);
+        var withMappings = await _uow.Items.GetWithMappingsAsync(item.Id, ct);
         return ApiResult<ItemDto>.Ok(ItemMapper.ToDto(withMappings!));
     }
 }
@@ -162,13 +162,13 @@ public sealed class GetItemsByCategoryHandler
     }
 
     public async Task<ApiResult<IEnumerable<ItemSummaryDto>>> Handle(
-        GetItemsByCategoryQuery request, CancellationToken cancellationToken)
+        GetItemsByCategoryQuery request, CancellationToken ct)
     {
-        _ = await _uow.Categories.GetByIdAsync(request.CategoryId, cancellationToken)
+        _ = await _uow.Categories.GetByIdAsync(request.CategoryId, ct)
             ?? throw new NotFoundException(nameof(Category), request.CategoryId);
 
         var items = await _uow.Items.GetByCategoryAsync(
-            request.CategoryId, _user.TenantId, cancellationToken);
+            request.CategoryId, _user.TenantId, ct);
 
         return ApiResult<IEnumerable<ItemSummaryDto>>.Ok(
             items.Select(ItemMapper.ToSummaryDto));

@@ -1,12 +1,12 @@
 using MediatR;
-using TrendsPulse.Platform.Application.Common;
-using TrendsPulse.Platform.Application.Common.Exceptions;
-using TrendsPulse.Platform.Application.Common.Interfaces;
-using TrendsPulse.Platform.Application.Common.Mappings;
+using TrendsPulse.Platform.Application.Tests.Common;
+using TrendsPulse.Platform.Application.Tests.Common.Exceptions;
+using TrendsPulse.Platform.Application.Tests.Common.Interfaces;
+using TrendsPulse.Platform.Application.Tests.Common.Mappings;
 using TrendsPulse.Platform.Domain.Entities;
 using TrendsPulse.Platform.Domain.Interfaces;
 
-namespace TrendsPulse.Platform.Application.Features.DataSourceMappings.Queries;
+namespace TrendsPulse.Platform.Application.Tests.Features.DataSourceMappings.Queries;
 
 // ════════════════════════════════════════════
 // GET MAPPINGS BY ITEM
@@ -31,9 +31,9 @@ public sealed class GetMappingsByItemHandler
     }
 
     public async Task<ApiResult<IEnumerable<DataSourceMappingDto>>> Handle(
-        GetMappingsByItemQuery request, CancellationToken cancellationToken)
+        GetMappingsByItemQuery request, CancellationToken ct)
     {
-        var item = await _uow.Items.GetByIdAsync(request.ItemId, cancellationToken)
+        var item = await _uow.Items.GetByIdAsync(request.ItemId, ct)
             ?? throw new NotFoundException(nameof(Item), request.ItemId);
 
         if (item.TenantId.HasValue
@@ -41,7 +41,7 @@ public sealed class GetMappingsByItemHandler
             && !_user.IsSuperAdmin)
             throw new ForbiddenException("You do not have access to this item.");
 
-        var mappings = await _uow.DataSourceMappings.GetByItemAsync(request.ItemId, cancellationToken);
+        var mappings = await _uow.DataSourceMappings.GetByItemAsync(request.ItemId, ct);
 
         var dtos = mappings
             .OrderByDescending(m => m.IsPrimary)
@@ -75,12 +75,12 @@ public sealed class GetMappingByIdHandler
     }
 
     public async Task<ApiResult<DataSourceMappingDto>> Handle(
-        GetMappingByIdQuery request, CancellationToken cancellationToken)
+        GetMappingByIdQuery request, CancellationToken ct)
     {
-        var mapping = await _uow.DataSourceMappings.GetByIdAsync(request.Id, cancellationToken)
+        var mapping = await _uow.DataSourceMappings.GetByIdAsync(request.Id, ct)
             ?? throw new NotFoundException(nameof(DataSourceMapping), request.Id);
 
-        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, cancellationToken)
+        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, ct)
             ?? throw new NotFoundException(nameof(Item), mapping.ItemId);
 
         if (item.TenantId.HasValue

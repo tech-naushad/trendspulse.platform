@@ -26,22 +26,22 @@ public class ApplicationDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 
-    public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Auto-set UpdatedAt
         foreach (var entry in ChangeTracker.Entries<BaseEntity>()
             .Where(e => e.State == EntityState.Modified))
             entry.Entity.UpdatedAt = DateTime.UtcNow;
 
-        var result = await base.SaveChangesAsync(ct);
+        var result = await base.SaveChangesAsync(cancellationToken);
 
         // Dispatch domain events AFTER saving
-        await DispatchDomainEventsAsync(ct);
+        await DispatchDomainEventsAsync(cancellationToken);
 
         return result;
     }
 
-    private async Task DispatchDomainEventsAsync(CancellationToken ct)
+    private async Task DispatchDomainEventsAsync(CancellationToken cancellationToken)
     {
         var entities = ChangeTracker.Entries<BaseEntity>()
             .Where(e => e.Entity.DomainEvents.Any())
@@ -52,6 +52,6 @@ public class ApplicationDbContext : DbContext
         entities.ForEach(e => e.ClearDomainEvents());
 
         foreach (var @event in events)
-            await _mediator.Publish(@event, ct);
+            await _mediator.Publish(@event, cancellationToken);
     }
 }

@@ -1,15 +1,14 @@
 using FluentValidation;
 using MediatR;
-using System.Threading;
-using TrendsPulse.Platform.Application.Common;
-using TrendsPulse.Platform.Application.Common.Exceptions;
-using TrendsPulse.Platform.Application.Common.Interfaces;
-using TrendsPulse.Platform.Application.Common.Mappings;
+using TrendsPulse.Platform.Application.Tests.Common;
+using TrendsPulse.Platform.Application.Tests.Common.Exceptions;
+using TrendsPulse.Platform.Application.Tests.Common.Interfaces;
+using TrendsPulse.Platform.Application.Tests.Common.Mappings;
 using TrendsPulse.Platform.Domain.Entities;
 using TrendsPulse.Platform.Domain.Enums;
 using TrendsPulse.Platform.Domain.Interfaces;
 
-namespace TrendsPulse.Platform.Application.Features.DataSourceMappings.Commands;
+namespace TrendsPulse.Platform.Application.Tests.Features.DataSourceMappings.Commands;
 
 // ════════════════════════════════════════════
 // CREATE MAPPING
@@ -69,22 +68,22 @@ public sealed class CreateMappingHandler
     }
 
     public async Task<ApiResult<DataSourceMappingDto>> Handle(
-        CreateMappingCommand cmd, CancellationToken cancellationToken)
+        CreateMappingCommand cmd, CancellationToken ct)
     {
-        var item = await _uow.Items.GetByIdAsync(cmd.ItemId, cancellationToken)
+        var item = await _uow.Items.GetByIdAsync(cmd.ItemId, ct)
             ?? throw new NotFoundException(nameof(Item), cmd.ItemId);
 
         if (item.TenantId != _user.TenantId && !_user.IsSuperAdmin)
             throw new ForbiddenException("You do not have permission to configure this item.");
 
-        await _uow.BeginTransactionAsync(cancellationToken);
+        await _uow.BeginTransactionAsync(ct);
         try
         {
             // Demote existing primary if needed
             if (cmd.IsPrimary)
             {
                 var existingPrimary = await _uow.DataSourceMappings
-                    .GetPrimaryForItemAsync(cmd.ItemId, cancellationToken);
+                    .GetPrimaryForItemAsync(cmd.ItemId, ct);
                 if (existingPrimary is not null)
                 {
                     existingPrimary.DemoteFromPrimary(_user.UserName);
@@ -100,9 +99,9 @@ public sealed class CreateMappingHandler
                 cmd.CustomTimestampJsonPath, cmd.CustomHeaders,
                 _user.UserName);
 
-            await _uow.DataSourceMappings.AddAsync(mapping, cancellationToken);
-            await _uow.SaveChangesAsync(cancellationToken);
-            await _uow.CommitTransactionAsync(cancellationToken);
+            await _uow.DataSourceMappings.AddAsync(mapping, ct);
+            await _uow.SaveChangesAsync(ct);
+            await _uow.CommitTransactionAsync(ct);
 
             return ApiResult<DataSourceMappingDto>.Ok(
                 DataSourceMappingMapper.ToDto(mapping, item.Name),
@@ -110,7 +109,7 @@ public sealed class CreateMappingHandler
         }
         catch
         {
-            await _uow.RollbackTransactionAsync(cancellationToken);
+            await _uow.RollbackTransactionAsync(ct);
             throw;
         }
     }
@@ -172,25 +171,25 @@ public sealed class UpdateMappingHandler
     }
 
     public async Task<ApiResult<DataSourceMappingDto>> Handle(
-        UpdateMappingCommand cmd, CancellationToken cancellationToken)
+        UpdateMappingCommand cmd, CancellationToken ct)
     {
-        var mapping = await _uow.DataSourceMappings.GetByIdAsync(cmd.Id, cancellationToken)
+        var mapping = await _uow.DataSourceMappings.GetByIdAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(DataSourceMapping), cmd.Id);
 
-        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, cancellationToken)
+        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, ct)
             ?? throw new NotFoundException(nameof(Item), mapping.ItemId);
 
         if (item.TenantId != _user.TenantId && !_user.IsSuperAdmin)
             throw new ForbiddenException("You do not have permission to configure this item.");
 
-        await _uow.BeginTransactionAsync(cancellationToken);
+        await _uow.BeginTransactionAsync(ct);
         try
         {
             // Promoting to primary — demote current primary
             if (cmd.IsPrimary && !mapping.IsPrimary)
             {
                 var current = await _uow.DataSourceMappings
-                    .GetPrimaryForItemAsync(mapping.ItemId, cancellationToken);
+                    .GetPrimaryForItemAsync(mapping.ItemId, ct);
                 if (current is not null && current.Id != cmd.Id)
                 {
                     current.DemoteFromPrimary(_user.UserName);
@@ -206,8 +205,8 @@ public sealed class UpdateMappingHandler
                 cmd.CustomHeaders, _user.UserName);
 
             _uow.DataSourceMappings.Update(mapping);
-            await _uow.SaveChangesAsync(cancellationToken);
-            await _uow.CommitTransactionAsync(cancellationToken);
+            await _uow.SaveChangesAsync(ct);
+            await _uow.CommitTransactionAsync(ct);
 
             return ApiResult<DataSourceMappingDto>.Ok(
                 DataSourceMappingMapper.ToDto(mapping, item.Name),
@@ -215,7 +214,7 @@ public sealed class UpdateMappingHandler
         }
         catch
         {
-            await _uow.RollbackTransactionAsync(cancellationToken);
+            await _uow.RollbackTransactionAsync(ct);
             throw;
         }
     }
@@ -240,12 +239,12 @@ public sealed class ToggleMappingHandler
     }
 
     public async Task<ApiResult<DataSourceMappingDto>> Handle(
-        ToggleMappingCommand cmd, CancellationToken cancellationToken)
+        ToggleMappingCommand cmd, CancellationToken ct)
     {
-        var mapping = await _uow.DataSourceMappings.GetByIdAsync(cmd.Id, cancellationToken)
+        var mapping = await _uow.DataSourceMappings.GetByIdAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(DataSourceMapping), cmd.Id);
 
-        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, cancellationToken)
+        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, ct)
             ?? throw new NotFoundException(nameof(Item), mapping.ItemId);
 
         if (item.TenantId != _user.TenantId && !_user.IsSuperAdmin)
@@ -253,7 +252,7 @@ public sealed class ToggleMappingHandler
 
         mapping.Toggle(_user.UserName);
         _uow.DataSourceMappings.Update(mapping);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.SaveChangesAsync(ct);
 
         return ApiResult<DataSourceMappingDto>.Ok(
             DataSourceMappingMapper.ToDto(mapping, item.Name),
@@ -279,22 +278,22 @@ public sealed class DeleteMappingHandler
     }
 
     public async Task<ApiResult<bool>> Handle(
-        DeleteMappingCommand cmd, CancellationToken cancellationToken)
+        DeleteMappingCommand cmd, CancellationToken ct)
     {
-        var mapping = await _uow.DataSourceMappings.GetByIdAsync(cmd.Id, cancellationToken)
+        var mapping = await _uow.DataSourceMappings.GetByIdAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(DataSourceMapping), cmd.Id);
 
         if (mapping.IsPrimary)
             throw new ConflictException(
                 "Cannot delete the primary mapping. Promote another mapping first.");
 
-        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, cancellationToken);
+        var item = await _uow.Items.GetByIdAsync(mapping.ItemId, ct);
         if (item is not null && item.TenantId != _user.TenantId && !_user.IsSuperAdmin)
             throw new ForbiddenException("You do not have permission to configure this item.");
 
         mapping.SoftDelete(_user.UserName);
         _uow.DataSourceMappings.Update(mapping);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.SaveChangesAsync(ct);
 
         return ApiResult<bool>.Ok(true, "Mapping deleted successfully.");
     }

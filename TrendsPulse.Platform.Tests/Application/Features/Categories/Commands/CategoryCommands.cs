@@ -1,15 +1,14 @@
 using FluentValidation;
 using MediatR;
-using System.Threading;
-using TrendsPulse.Platform.Application.Common;
-using TrendsPulse.Platform.Application.Common.Exceptions;
-using TrendsPulse.Platform.Application.Common.Interfaces;
-using TrendsPulse.Platform.Application.Common.Mappings;
+using TrendsPulse.Platform.Application.Tests.Common;
+using TrendsPulse.Platform.Application.Tests.Common.Exceptions;
+using TrendsPulse.Platform.Application.Tests.Common.Interfaces;
+using TrendsPulse.Platform.Application.Tests.Common.Mappings;
 using TrendsPulse.Platform.Domain.Entities;
 using TrendsPulse.Platform.Domain.Enums;
 using TrendsPulse.Platform.Domain.Interfaces;
 
-namespace TrendsPulse.Platform.Application.Features.Categories.Commands;
+namespace TrendsPulse.Platform.Application.Tests.Features.Categories.Commands;
 
 // ════════════════════════════════════════════
 // CREATE CATEGORY
@@ -55,27 +54,27 @@ public sealed class CreateCategoryHandler
     }
 
     public async Task<ApiResult<CategoryDto>> Handle(
-        CreateCategoryCommand command, CancellationToken cancellationToken)
+        CreateCategoryCommand cmd, CancellationToken ct)
     {
-        if (!_user.IsSuperAdmin && command.Type != CategoryType.Custom
-            && command.Type != CategoryType.Stocks)
+        if (!_user.IsSuperAdmin && cmd.Type != CategoryType.Custom
+            && cmd.Type != CategoryType.Stocks)
         {
             // Only SuperAdmins can create system-type categories.
             // Tenants can create Custom/Stocks (business decision).
         }
 
         await _domainService.EnsureNameIsUniqueAsync(
-            command.Name, _user.TenantId, excludeId: null, cancellationToken);
+            cmd.Name, _user.TenantId, excludeId: null, ct);
 
-        var displayOrder = command.DisplayOrder
-            ?? await _uow.Categories.GetNextDisplayOrderAsync(_user.TenantId, cancellationToken);
+        var displayOrder = cmd.DisplayOrder
+            ?? await _uow.Categories.GetNextDisplayOrderAsync(_user.TenantId, ct);
 
         var category = Category.Create(
-            command.Name, command.Description, command.IconCode, command.ColorHex,
-            command.Type, displayOrder, _user.TenantId, _user.UserName);
+            cmd.Name, cmd.Description, cmd.IconCode, cmd.ColorHex,
+            cmd.Type, displayOrder, _user.TenantId, _user.UserName);
 
-        await _uow.Categories.AddAsync(category, cancellationToken);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.Categories.AddAsync(category, ct);
+        await _uow.SaveChangesAsync(ct);
 
         return ApiResult<CategoryDto>.Ok(
             CategoryMapper.ToDto(category, 0),
@@ -123,9 +122,9 @@ public sealed class UpdateCategoryHandler
     }
 
     public async Task<ApiResult<CategoryDto>> Handle(
-        UpdateCategoryCommand cmd, CancellationToken cancellationToken)
+        UpdateCategoryCommand cmd, CancellationToken ct)
     {
-        var category = await _uow.Categories.GetByIdAsync(cmd.Id, cancellationToken)
+        var category = await _uow.Categories.GetByIdAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(Category), cmd.Id);
 
         if (category.IsSystem && !_user.IsSuperAdmin)
@@ -135,13 +134,13 @@ public sealed class UpdateCategoryHandler
             throw new ForbiddenException("You do not have permission to modify this category.");
 
         await _domainService.EnsureNameIsUniqueAsync(
-            cmd.Name, _user.TenantId, excludeId: cmd.Id, cancellationToken);
+            cmd.Name, _user.TenantId, excludeId: cmd.Id, ct);
 
         category.Update(cmd.Name, cmd.Description, cmd.IconCode,
             cmd.ColorHex, cmd.Type, cmd.DisplayOrder, _user.UserName);
 
         _uow.Categories.Update(category);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.SaveChangesAsync(ct);
 
         return ApiResult<CategoryDto>.Ok(CategoryMapper.ToDto(category, 0));
     }
@@ -166,9 +165,9 @@ public sealed class DeleteCategoryHandler
     }
 
     public async Task<ApiResult<bool>> Handle(
-        DeleteCategoryCommand cmd, CancellationToken cancellationToken)
+        DeleteCategoryCommand cmd, CancellationToken ct)
     {
-        var category = await _uow.Categories.GetByIdAsync(cmd.Id, cancellationToken)
+        var category = await _uow.Categories.GetByIdAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(Category), cmd.Id);
 
         if (category.IsSystem)
@@ -177,11 +176,12 @@ public sealed class DeleteCategoryHandler
         if (category.TenantId != _user.TenantId && !_user.IsSuperAdmin)
             throw new ForbiddenException("You do not have permission to delete this category.");
 
-        await _domainService.EnsureCanDeleteAsync(cmd.Id, cancellationToken);
+        await _domainService.EnsureCanDeleteAsync(cmd.Id, ct);
 
         category.SoftDelete(_user.UserName);
         _uow.Categories.Update(category);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.SaveChangesAsync(ct);
+
         return ApiResult<bool>.Ok(true, "Category deleted successfully.");
     }
 }

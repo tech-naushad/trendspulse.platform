@@ -103,3 +103,9 @@ docker-compose.override.yml
 # Logs & runtime
 logs/
 *.runtimeconfig.dev.json
+
+# Sonar Qube
+.sonarqube/
+
+# Sonar / security scan outputs
+vulnerability-raw.txt

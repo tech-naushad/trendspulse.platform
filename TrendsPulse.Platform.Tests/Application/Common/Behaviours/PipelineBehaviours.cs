@@ -2,11 +2,11 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using TrendsPulse.Platform.Application.Common.Exceptions;
-using TrendsPulse.Platform.Application.Common.Interfaces;
-using ValidationException = TrendsPulse.Platform.Application.Common.Exceptions.ValidationException;
+using TrendsPulse.Platform.Application.Tests.Common.Exceptions;
+using TrendsPulse.Platform.Application.Tests.Common.Interfaces;
+using ValidationException = TrendsPulse.Platform.Application.Tests.Common.Exceptions.ValidationException;
 
-namespace TrendsPulse.Platform.Application.Common.Behaviours;
+namespace TrendsPulse.Platform.Application.Tests.Common.Behaviours;
 
 // ── 1. Validation Behaviour ───────────────────────────────────────────────────
 /// <summary>
@@ -26,7 +26,7 @@ public sealed class ValidationBehaviour<TRequest, TResponse>
     public async Task<TResponse> Handle(
         TRequest request,
         RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
+        CancellationToken ct)
     {
         if (!_validators.Any())
             return await next();
@@ -34,7 +34,7 @@ public sealed class ValidationBehaviour<TRequest, TResponse>
         var context = new ValidationContext<TRequest>(request);
 
         var results = await Task.WhenAll(
-            _validators.Select(v => v.ValidateAsync(context, cancellationToken)));
+            _validators.Select(v => v.ValidateAsync(context, ct)));
 
         var failures = results
             .SelectMany(r => r.Errors)
@@ -68,7 +68,7 @@ public sealed class LoggingBehaviour<TRequest, TResponse>
     public async Task<TResponse> Handle(
         TRequest request,
         RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
+        CancellationToken ct)
     {
         var name = typeof(TRequest).Name;
         _logger.LogDebug("Handling {RequestName}", name);
@@ -102,7 +102,7 @@ public sealed class CachingBehaviour<TRequest, TResponse>
     public async Task<TResponse> Handle(
         TRequest request,
         RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
+        CancellationToken ct)
     {
         if (request is not ICacheableQuery cacheable)
             return await next();

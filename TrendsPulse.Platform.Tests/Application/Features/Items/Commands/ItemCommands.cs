@@ -1,14 +1,14 @@
 using FluentValidation;
 using MediatR;
-using TrendsPulse.Platform.Application.Common;
-using TrendsPulse.Platform.Application.Common.Exceptions;
-using TrendsPulse.Platform.Application.Common.Interfaces;
-using TrendsPulse.Platform.Application.Common.Mappings;
+using TrendsPulse.Platform.Application.Tests.Common;
+using TrendsPulse.Platform.Application.Tests.Common.Exceptions;
+using TrendsPulse.Platform.Application.Tests.Common.Interfaces;
+using TrendsPulse.Platform.Application.Tests.Common.Mappings;
 using TrendsPulse.Platform.Domain.Entities;
 using TrendsPulse.Platform.Domain.Enums;
 using TrendsPulse.Platform.Domain.Interfaces;
 
-namespace TrendsPulse.Platform.Application.Features.Items.Commands;
+namespace TrendsPulse.Platform.Application.Tests.Features.Items.Commands;
 
 // ════════════════════════════════════════════
 // CREATE ITEM
@@ -66,14 +66,14 @@ public sealed class CreateItemHandler : IRequestHandler<CreateItemCommand, ApiRe
     }
 
     public async Task<ApiResult<ItemDto>> Handle(
-        CreateItemCommand cmd, CancellationToken cancellationToken)
+        CreateItemCommand cmd, CancellationToken ct)
     {
         if (!_user.IsSuperAdmin && cmd.Visibility == ItemVisibility.Global)
             throw new ForbiddenException("Only Super Admins can create global items.");
 
-        await _itemDomain.EnsureCategoryExistsAsync(cmd.CategoryId, _user.TenantId, cancellationToken);
+        await _itemDomain.EnsureCategoryExistsAsync(cmd.CategoryId, _user.TenantId, ct);
 
-        var slug = await _itemDomain.GenerateUniqueSlugAsync(cmd.Name, excludeItemId: null, cancellationToken);
+        var slug = await _itemDomain.GenerateUniqueSlugAsync(cmd.Name, excludeItemId: null, ct);
 
         var item = Item.Create(
             cmd.Name, slug, cmd.Description, cmd.Symbol,
@@ -81,11 +81,11 @@ public sealed class CreateItemHandler : IRequestHandler<CreateItemCommand, ApiRe
             cmd.Visibility, cmd.Tags, cmd.ThumbnailUrl,
             cmd.CategoryId, _user.TenantId, _user.UserName);
 
-        await _uow.Items.AddAsync(item, cancellationToken);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.Items.AddAsync(item, ct);
+        await _uow.SaveChangesAsync(ct);
 
         // Reload with navigation properties for response
-        var created = await _uow.Items.GetWithMappingsAsync(item.Id, cancellationToken);
+        var created = await _uow.Items.GetWithMappingsAsync(item.Id, ct);
         return ApiResult<ItemDto>.Ok(ItemMapper.ToDto(created!), "Item created successfully.");
     }
 }
@@ -144,9 +144,9 @@ public sealed class UpdateItemHandler : IRequestHandler<UpdateItemCommand, ApiRe
     }
 
     public async Task<ApiResult<ItemDto>> Handle(
-        UpdateItemCommand cmd, CancellationToken cancellationToken)
+        UpdateItemCommand cmd, CancellationToken ct)
     {
-        var item = await _uow.Items.GetWithMappingsAsync(cmd.Id, cancellationToken)
+        var item = await _uow.Items.GetWithMappingsAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(Item), cmd.Id);
 
         if (item.IsSystem && !_user.IsSuperAdmin)
@@ -158,12 +158,12 @@ public sealed class UpdateItemHandler : IRequestHandler<UpdateItemCommand, ApiRe
         if (!_user.IsSuperAdmin && cmd.Visibility == ItemVisibility.Global)
             throw new ForbiddenException("Only Super Admins can make items global.");
 
-        await _itemDomain.EnsureCategoryExistsAsync(cmd.CategoryId, _user.TenantId, cancellationToken);
+        await _itemDomain.EnsureCategoryExistsAsync(cmd.CategoryId, _user.TenantId, ct);
 
         // Regenerate slug only if name changed
         var slug = item.Name.Equals(cmd.Name.Trim(), StringComparison.OrdinalIgnoreCase)
             ? Domain.ValueObjects.Slug.Create(item.Slug)
-            : await _itemDomain.GenerateUniqueSlugAsync(cmd.Name, excludeItemId: cmd.Id, cancellationToken);
+            : await _itemDomain.GenerateUniqueSlugAsync(cmd.Name, excludeItemId: cmd.Id, ct);
 
         item.Update(cmd.Name, slug, cmd.Description, cmd.Symbol,
             cmd.Unit, cmd.CustomUnitLabel, cmd.DecimalPrecision,
@@ -171,9 +171,9 @@ public sealed class UpdateItemHandler : IRequestHandler<UpdateItemCommand, ApiRe
             cmd.CategoryId, _user.UserName);
 
         _uow.Items.Update(item);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.SaveChangesAsync(ct);
 
-        var updated = await _uow.Items.GetWithMappingsAsync(cmd.Id, cancellationToken);
+        var updated = await _uow.Items.GetWithMappingsAsync(cmd.Id, ct);
         return ApiResult<ItemDto>.Ok(ItemMapper.ToDto(updated!), "Item updated successfully.");
     }
 }
@@ -208,9 +208,9 @@ public sealed class PatchItemStatusHandler
     }
 
     public async Task<ApiResult<ItemDto>> Handle(
-        PatchItemStatusCommand cmd, CancellationToken cancellationToken)
+        PatchItemStatusCommand cmd, CancellationToken ct)
     {
-        var item = await _uow.Items.GetWithMappingsAsync(cmd.Id, cancellationToken)
+        var item = await _uow.Items.GetWithMappingsAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(Item), cmd.Id);
 
         if (item.IsSystem && !_user.IsSuperAdmin)
@@ -221,9 +221,9 @@ public sealed class PatchItemStatusHandler
 
         item.ChangeStatus(cmd.Status, _user.UserName);
         _uow.Items.Update(item);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.SaveChangesAsync(ct);
 
-        var updated = await _uow.Items.GetWithMappingsAsync(cmd.Id, cancellationToken);
+        var updated = await _uow.Items.GetWithMappingsAsync(cmd.Id, ct);
         return ApiResult<ItemDto>.Ok(ItemMapper.ToDto(updated!),
             $"Item status changed to {cmd.Status}.");
     }
@@ -246,9 +246,9 @@ public sealed class DeleteItemHandler : IRequestHandler<DeleteItemCommand, ApiRe
     }
 
     public async Task<ApiResult<bool>> Handle(
-        DeleteItemCommand cmd, CancellationToken cancellationToken)
+        DeleteItemCommand cmd, CancellationToken ct)
     {
-        var item = await _uow.Items.GetByIdAsync(cmd.Id, cancellationToken)
+        var item = await _uow.Items.GetByIdAsync(cmd.Id, ct)
             ?? throw new NotFoundException(nameof(Item), cmd.Id);
 
         if (item.IsSystem)
@@ -259,7 +259,7 @@ public sealed class DeleteItemHandler : IRequestHandler<DeleteItemCommand, ApiRe
 
         item.SoftDelete(_user.UserName);
         _uow.Items.Update(item);
-        await _uow.SaveChangesAsync(cancellationToken);
+        await _uow.SaveChangesAsync(ct);
 
         return ApiResult<bool>.Ok(true, "Item deleted successfully.");
     }

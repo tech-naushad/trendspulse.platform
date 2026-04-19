@@ -1,12 +1,12 @@
 using MediatR;
-using TrendsPulse.Platform.Application.Common;
-using TrendsPulse.Platform.Application.Common.Exceptions;
-using TrendsPulse.Platform.Application.Common.Interfaces;
-using TrendsPulse.Platform.Application.Common.Mappings;
+using TrendsPulse.Platform.Application.Tests.Common;
+using TrendsPulse.Platform.Application.Tests.Common.Exceptions;
+using TrendsPulse.Platform.Application.Tests.Common.Interfaces;
+using TrendsPulse.Platform.Application.Tests.Common.Mappings;
 using TrendsPulse.Platform.Domain.Entities;
 using TrendsPulse.Platform.Domain.Interfaces;
 
-namespace TrendsPulse.Platform.Application.Features.Categories.Queries;
+namespace TrendsPulse.Platform.Application.Tests.Features.Categories.Queries;
 
 // ════════════════════════════════════════════
 // GET ALL CATEGORIES
@@ -31,9 +31,9 @@ public sealed class GetCategoriesHandler
     }
 
     public async Task<ApiResult<IEnumerable<CategoryDto>>> Handle(
-        GetCategoriesQuery request, CancellationToken cancellationToken)
+        GetCategoriesQuery request, CancellationToken ct)
     {
-        var categories = await _uow.Categories.GetVisibleToTenantAsync(_user.TenantId, cancellationToken);
+        var categories = await _uow.Categories.GetVisibleToTenantAsync(_user.TenantId, ct);
 
         var dtos = categories
             .OrderBy(c => c.DisplayOrder)
@@ -68,9 +68,9 @@ public sealed class GetCategoryByIdHandler
     }
 
     public async Task<ApiResult<CategoryDto>> Handle(
-        GetCategoryByIdQuery request, CancellationToken cancellationToken)
+        GetCategoryByIdQuery request, CancellationToken ct)
     {
-        var category = await _uow.Categories.GetByIdAsync(request.Id, cancellationToken)
+        var category = await _uow.Categories.GetByIdAsync(request.Id, ct)
             ?? throw new NotFoundException(nameof(Category), request.Id);
 
         if (category.TenantId.HasValue
@@ -78,7 +78,7 @@ public sealed class GetCategoryByIdHandler
             && !_user.IsSuperAdmin)
             throw new ForbiddenException("You do not have access to this category.");
 
-        var itemCount = await _uow.Categories.HasActiveItemsAsync(request.Id, cancellationToken) ? 1 : 0;
+        var itemCount = await _uow.Categories.HasActiveItemsAsync(request.Id, ct) ? 1 : 0;
         return ApiResult<CategoryDto>.Ok(CategoryMapper.ToDto(category, itemCount));
     }
 }
